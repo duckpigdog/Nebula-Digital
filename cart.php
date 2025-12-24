@@ -17,15 +17,9 @@ if(isset($_GET['enc'])){
       $cart=isset($_SESSION['cart'])?$_SESSION['cart']:[];
       $ids=array_keys($cart);
       $total=0;
-      if(count($ids)){
-        $in=implode(',',array_map('intval',$ids));
-        $res=$mysqli->query("SELECT id,price FROM products WHERE id IN ($in)");
-        while($row=$res->fetch_assoc()){$qty=$cart[$row['id']];$total+=floatval($row['price'])*$qty;}
-      }
-      $uid=isset($_SESSION['admin_id'])?intval($_SESSION['admin_id']):null;
-      $uidsql=is_null($uid)?'NULL':intval($uid);
-      $mysqli->query("INSERT INTO orders(user_id,total) VALUES($uidsql,".floatval($total).")");
-      $oid=$mysqli->insert_id;
+      $all=load_products(); $map=[]; foreach($all as $p){$map[$p['id']]=$p;}
+      foreach($ids as $id){ if(isset($map[$id])){ $qty=$cart[$id]; $total+=floatval($map[$id]['price'])*$qty; } }
+      $oid=time();
       $_SESSION['cart']=[];
       header('Location: /cart.php?order='.$oid);
       exit;
@@ -39,12 +33,13 @@ $ids=array_keys($cart);
 $list=[];
 $total=0;
 if(count($ids)){
-  $in=implode(',',array_map('intval',$ids));
-  $res=$mysqli->query("SELECT id,title,price,cover FROM products WHERE id IN ($in)");
-  while($row=$res->fetch_assoc()){
-    $qty=$cart[$row['id']];
-    $list[]=['id'=>$row['id'],'title'=>$row['title'],'price'=>$row['price'],'qty'=>$qty,'cover'=>$row['cover']];
-    $total+=floatval($row['price'])*$qty;
+  $all=load_products(); $map=[]; foreach($all as $p){$map[$p['id']]=$p;}
+  foreach($ids as $id){
+    if(isset($map[$id])){
+      $qty=$cart[$id];
+      $list[]=['id'=>$map[$id]['id'],'title'=>$map[$id]['title'],'price'=>$map[$id]['price'],'qty'=>$qty,'cover'=>$map[$id]['cover']];
+      $total+=floatval($map[$id]['price'])*$qty;
+    }
   }
 }
 ?><!DOCTYPE html>

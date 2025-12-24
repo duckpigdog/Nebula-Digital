@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      DB_HOST: db:3306
+      DB_USER: policeman
+      DB_PASS: policeman
+      DB_NAME: sir-database
+    volumes:
+      - ./uploads:/var/www/html/uploads
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: sir-database
+      MYSQL_USER: policeman
+      MYSQL_PASSWORD: policeman
+      MYSQL_ROOT_PASSWORD: rootpw
+    ports:
+      - "3316:3306"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql

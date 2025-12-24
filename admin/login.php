@@ -5,11 +5,7 @@ if(isset($_POST['enc'])){
   $ip=isset($_SERVER['HTTP_X_FORWARDED_FOR'])?trim(explode(',',$_SERVER['HTTP_X_FORWARDED_FOR'])[0]):$_SERVER['REMOTE_ADDR'];
   if($ip===''){$ip='0.0.0.0';}
   $now=time();
-  $stmt0=$mysqli->prepare("SELECT fail,lock_until FROM bf_ip WHERE ip=?");
-  $stmt0->bind_param('s',$ip);
-  $stmt0->execute();
-  $rs0=$stmt0->get_result();
-  $row0=$rs0?$rs0->fetch_assoc():null;
+  $row0=iplock_get($ip);
   if($row0&&intval($row0['lock_until'])>$now){
     $err='当前IP已锁定，请稍后再试';
   } else {
@@ -17,24 +13,19 @@ if(isset($_POST['enc'])){
     $data=json_decode($raw,true);
     $u=isset($data['u'])?trim($data['u']):'';
     $p=isset($data['p'])?trim($data['p']):'';
-    $stmt=$mysqli->prepare("SELECT id FROM users WHERE username=? AND password=? AND role='admin' LIMIT 1");
-    $stmt->bind_param('ss',$u,$p);
-    $stmt->execute();
-    $res=$stmt->get_result();
-    if($row=$res->fetch_assoc()){
-      $_SESSION['admin_id']=$row['id'];
-      $stmt1=$mysqli->prepare("REPLACE INTO bf_ip(ip,fail,lock_until) VALUES(?,0,0)");
-      $stmt1->bind_param('s',$ip);
-      $stmt1->execute();
+    $users=get_users();
+    $found=null;
+    foreach($users as $usr){ if($usr['username']===$u && $usr['password']===$p && $usr['role']==='admin'){ $found=$usr; break; } }
+    if($found){
+      $_SESSION['admin_id']=$found['id'];
+      iplock_set($ip,0,0);
       header('Location: /admin/dashboard.php');
       exit;
     } else {
       $fail=$row0?intval($row0['fail'])+1:1;
       $lock=0;
       if($fail>=5){$lock=$now+60;$fail=0;}
-      $stmt2=$mysqli->prepare("REPLACE INTO bf_ip(ip,fail,lock_until) VALUES(?,?,?)");
-      $stmt2->bind_param('sii',$ip,$fail,$lock);
-      $stmt2->execute();
+      iplock_set($ip,$fail,$lock);
       $err='账号或密码错误';
     }
   }

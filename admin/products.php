@@ -29,9 +29,10 @@ if(isset($_FILES['file']) && $_FILES['file']['error']===UPLOAD_ERR_OK){
   $price=isset($_POST['price'])?floatval($_POST['price']):0;
   $stock=isset($_POST['stock'])?intval($_POST['stock']):0;
   $cover='/uploads/'.$name;
-  $stmt=$mysqli->prepare("INSERT INTO products(title,price,stock,cover) VALUES(?,?,?,?)");
-  $stmt->bind_param('sdis',$title,$price,$stock,$cover);
-  $stmt->execute();
+  $arr=load_products();
+  $id=next_product_id($arr);
+  $arr[]=['id'=>$id,'title'=>$title,'price'=>$price,'stock'=>$stock,'cover'=>$cover];
+  save_products($arr);
   header('Location: /admin/products.php');
   exit;
 }
@@ -42,28 +43,30 @@ if(isset($_POST['enc'])){
     if($data['op']==='add'){
       $title=trim($data['title']??'');$cover=trim($data['cover']??'');$price=floatval($data['price']??0);$stock=intval($data['stock']??0);
       if($title!==''){
-        $stmt=$mysqli->prepare("INSERT INTO products(title,price,stock,cover) VALUES(?,?,?,?)");
-        $stmt->bind_param('sdis',$title,$price,$stock,$cover);
-        $stmt->execute();
+        $arr=load_products();
+        $id=next_product_id($arr);
+        $arr[]=['id'=>$id,'title'=>$title,'price'=>$price,'stock'=>$stock,'cover'=>$cover];
+        save_products($arr);
       }
     }
     if($data['op']==='del'){
       $id=intval($data['id']??0);
-      if($id>0){$stmt=$mysqli->prepare("DELETE FROM products WHERE id=?");$stmt->bind_param('i',$id);$stmt->execute();}
+      if($id>0){$arr=load_products();$out=[];foreach($arr as $p){if($p['id']!=$id)$out[]=$p;}save_products($out);}
     }
     if($data['op']==='inc'){
       $id=intval($data['id']??0);
-      if($id>0){$stmt=$mysqli->prepare("UPDATE products SET stock=stock+1 WHERE id=?");$stmt->bind_param('i',$id);$stmt->execute();}
+      if($id>0){$arr=load_products();for($i=0;$i<count($arr);$i++){if($arr[$i]['id']==$id){$arr[$i]['stock']=intval($arr[$i]['stock'])+1;}}save_products($arr);}
     }
     if($data['op']==='dec'){
       $id=intval($data['id']??0);
-      if($id>0){$stmt=$mysqli->prepare("UPDATE products SET stock=GREATEST(stock-1,0) WHERE id=?");$stmt->bind_param('i',$id);$stmt->execute();}
+      if($id>0){$arr=load_products();for($i=0;$i<count($arr);$i++){if($arr[$i]['id']==$id){$arr[$i]['stock']=max(intval($arr[$i]['stock'])-1,0);}}save_products($arr);}
     }
   }
   header('Location: /admin/products.php');
   exit;
 }
-$res=$mysqli->query("SELECT id,title,price,stock,cover FROM products ORDER BY id DESC");
+$list=load_products();
+usort($list,function($a,$b){return $b['id']<=>$a['id'];});
 ?><!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -112,7 +115,7 @@ $res=$mysqli->query("SELECT id,title,price,stock,cover FROM products ORDER BY id
     <table>
       <thead><tr><th>ID</th><th>封面</th><th>标题</th><th>价格</th><th>库存</th><th>操作</th></tr></thead>
       <tbody>
-        <?php while($p=$res->fetch_assoc()){ ?>
+        <?php foreach($list as $p){ ?>
         <tr>
           <td><?php echo intval($p['id']); ?></td>
           <td><img src="<?php echo htmlspecialchars($p['cover']); ?>" alt="" style="width:64px;height:40px;object-fit:cover;border-radius:6px"></td>

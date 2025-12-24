@@ -2,10 +2,10 @@
 session_start();
 require __DIR__.'/../lib/config.php';
 if(!isset($_SESSION['admin_id'])){header('Location: /admin/login.php');exit;}
-$users=$mysqli->query("SELECT id,username,role FROM users ORDER BY id ASC");
-$c1=$mysqli->query("SELECT COUNT(*) c FROM users")->fetch_assoc()['c'];
-$c2=$mysqli->query("SELECT COUNT(*) c FROM users WHERE role='admin'")->fetch_assoc()['c'];
-$c3=$mysqli->query("SELECT COUNT(*) c FROM orders")->fetch_assoc()['c'];
+$users=get_users();
+$c1=count($users);
+$c2=0;foreach($users as $u){if($u['role']==='admin')$c2++;}
+$c3=0;
 ?><!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -29,7 +29,7 @@ $c3=$mysqli->query("SELECT COUNT(*) c FROM orders")->fetch_assoc()['c'];
     <table>
       <thead><tr><th>ID</th><th>账号</th><th>角色</th></tr></thead>
       <tbody>
-      <?php while($u=$users->fetch_assoc()){ ?>
+      <?php foreach($users as $u){ ?>
         <tr><td><?php echo intval($u['id']); ?></td><td><?php echo htmlspecialchars($u['username']); ?></td><td><?php echo htmlspecialchars($u['role']); ?></td></tr>
       <?php } ?>
       </tbody>

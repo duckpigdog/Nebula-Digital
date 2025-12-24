@@ -14,9 +14,8 @@ if(isset($_GET['enc'])){
     exit;
   }
 }
-$res=$mysqli->query("SELECT id,title,price,cover FROM products ORDER BY id ASC");
-$items=[];
-while($row=$res->fetch_assoc()){$items[]=$row;}
+$items=load_products();
+usort($items,function($a,$b){return $a['id']<=>$b['id'];});
 ?><!DOCTYPE html>
 <html lang="zh-CN">
 <head>
