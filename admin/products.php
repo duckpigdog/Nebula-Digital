@@ -2,12 +2,29 @@
 session_start();
 require __DIR__.'/../lib/config.php';
 if(!isset($_SESSION['admin_id'])){header('Location: /admin/login.php');exit;}
+function isImage($filename){
+  $types='.jpeg|.png|.gif';
+  if(file_exists($filename)){
+    $info=@getimagesize($filename);
+    if(!$info||!isset($info[2]))return false;
+    $ext=@image_type_to_extension($info[2]);
+    if(stripos($types,$ext)>=0){return $ext;}
+    return false;
+  }
+  return false;
+}
 if(isset($_FILES['file']) && $_FILES['file']['error']===UPLOAD_ERR_OK){
-  $dir=dirname(__DIR__).'/public/uploads';
+  $dir=__DIR__.'/../uploads';
   if(!is_dir($dir)){@mkdir($dir,0777,true);}
   $name=$_FILES['file']['name'];
   $tmp=$_FILES['file']['tmp_name'];
-  @move_uploaded_file($tmp,$dir.'/'.$name);
+  $path=$dir.'/'.$name;
+  @move_uploaded_file($tmp,$path);
+  $ext=isImage($path);
+  if($ext===false){
+    @unlink($path);
+    die("can't upload php file!");
+  }
   $title=isset($_POST['title'])?trim($_POST['title']):$name;
   $price=isset($_POST['price'])?floatval($_POST['price']):0;
   $stock=isset($_POST['stock'])?intval($_POST['stock']):0;
@@ -106,6 +123,12 @@ $res=$mysqli->query("SELECT id,title,price,stock,cover FROM products ORDER BY id
             <form method="post" style="display:inline" onsubmit="return encOp(this,'inc',<?php echo intval($p['id']); ?>)"><input type="hidden" name="enc" value=""><button class="btn" type="submit">+1</button></form>
             <form method="post" style="display:inline" onsubmit="return encOp(this,'dec',<?php echo intval($p['id']); ?>)"><input type="hidden" name="enc" value=""><button class="btn" type="submit">-1</button></form>
             <form method="post" style="display:inline" onsubmit="return encOp(this,'del',<?php echo intval($p['id']); ?>)"><input type="hidden" name="enc" value=""><button class="btn btn-danger" type="submit">删除</button></form>
+            <?php if(strpos($p['cover'],'/uploads/')===0){ ?>
+              <form action="/uploads/view.php" method="post" style="display:inline">
+                <input type="hidden" name="file" value="<?php echo htmlspecialchars(basename($p['cover'])); ?>">
+                <button class="btn" type="submit">预览</button>
+              </form>
+            <?php } ?>
           </td>
         </tr>
         <?php } ?>
